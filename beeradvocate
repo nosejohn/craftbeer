@@ -1,0 +1,131 @@
+from requests_html import HTMLSession
+import requests
+import itertools
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common import action_chains
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
+import re
+
+
+
+baseurl = "https://www.beeradvocate.com"
+
+brewerylinks = []
+#char = '#'
+
+
+for i in range(25):
+    brewery_url = "https://www.beeradvocate.com/place/list//?start={}&c_id=US&s_id=PA&brewery=Y&sort=name".format(i*20)
+    brewery_r = requests.get(brewery_url.format(i*20))
+    brewery_soup = BeautifulSoup(brewery_r.content, "lxml")
+    bt = brewery_soup.find_all("td", {"colspan" : "2", "align":"left", "valign":"top"})
+
+    for item in bt:
+        for link in item.find_all("a", href = True):
+            brewerylinks.append(baseurl + link['href'])
+
+breweryName = []
+beerName = []
+status = []
+style = []
+ABV = []
+avgRating = []
+ratingCount = []
+dateAdded = []
+numbers = []
+address = []
+zipcode = []
+breweryType = []
+lastactive = []
+state = []
+pDev = []            
+
+chrome_options = Options()
+#argument to switch off suid sandBox and no sandBox in Chrome 
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-setuid-sandbox")
+chrome_options.add_argument("--window-position=2000,0")
+chrome_options.add_argument('disable-infobars')
+
+
+
+driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options = chrome_options)
+
+for link in brewerylinks:
+    driver.get(link)
+    page = driver.page_source
+    soup = BeautifulSoup(page, 'html.parser')
+
+    name_html = soup.findAll("td", {"valign": "type", "class" : "hr_bottom_light"})
+    
+    for name in name_html[0::7]:
+        beerName.append(name.get_text())
+        status.append("Present")
+        # at the starting and the ending /n 
+        breweryName.append(soup.find("div", {"class" : "titleBar"}).get_text())
+        address.append(soup.find("a", {"href":"/place/directory/9/US/PA/"}))
+        pDev.append(soup.find("span", {"class":"ba-pdev"}))
+        state.append("PA")
+
+    for name in name_html[1::7]:
+        style.append(name.get_text())
+
+    for name in name_html[2::7]:
+        ABV.append(name.get_text())
+
+    for name in name_html[3::7]:
+        ratingCount.append(name.get_text())
+
+    for name in name_html[4::7]:
+        avgRating.append(name.get_text())
+
+    for name in name_html[5::7]:
+        lastactive.append(name.get_text())
+
+    url = link + "?view=beers&show=retired#lists"
+    driver.get(url)
+    page = driver.page_source
+    soup = BeautifulSoup(page, 'html.parser')
+    name_html = soup.findAll("td", {"valign": "top", "class" : "hr_bottom_light"})
+
+    for name in name_html[0::7]:
+        beerName.append(name.get_text())
+        status.append("Retired")
+        breweryName.append(soup.find("div", {"class" : "titleBar"}).get_text())
+        address.append(soup.find("a", {"href":"/place/directory/9/US/PA/"}).get_text())
+        pDev.append(soup.find("span", {"class":"ba-pdev"}))
+        state.append("PA")
+
+    for name in name_html[1::7]:
+        style.append(name.get_text())
+
+    for name in name_html[2::7]:
+        ABV.append(name.get_text())
+
+    for name in name_html[3::7]:
+        ratingCount.append(name.get_text())
+
+    for name in name_html[4::7]:
+        avgRating.append(name.get_text())
+
+    for name in name_html[5::7]:
+        lastactive.append(name.get_text())    
+ 
+
+
+beeradvocate = {'State': state, 'Brewery Name': breweryName, 'Beer Name': beerName,
+                'Beer Status': status, 'Beer Type': style, 'ABV': ABV, 'Average Rating':avgRating,
+            'Rating Count':ratingCount, 'Last Active': lastactive}
+
+    #    ratebeer['Zip Code'] = ratebeer['Address'].str.extract(r '(\d{5}\-?\d{0,4})')
+    
+    
+
